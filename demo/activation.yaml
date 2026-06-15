@@ -74,3 +74,25 @@ rules:
       url: "https://api.telegram.org/bot${telegram_bot_token}/sendMessage"
       headers:
         chat_id: "${telegram_chat_id}"
+
+  # ── 7. Inventory low stock → Telegram ──
+  - table: "inventory"
+    op_type: Update
+    conditions:
+      - field: "quantity"
+        new_value: "5"
+    destination:
+      type: telegram
+      url: "https://api.telegram.org/bot${telegram_bot_token}/sendMessage"
+      headers:
+        chat_id: "${telegram_chat_id}"
+
+  # ── 8. Order status change → Telegram ──
+  - table: "orders"
+    op_type: Update
+    conditions: []
+    destination:
+      type: telegram
+      url: "https://api.telegram.org/bot${telegram_bot_token}/sendMessage"
+      headers:
+        chat_id: "${telegram_chat_id}"
