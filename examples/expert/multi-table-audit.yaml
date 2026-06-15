@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────
+# EXPERT: Multi-table audit trail
+# ──────────────────────────────────────────────
+# Sends all changes from sensitive tables to an
+# audit webhook for compliance (SOC2, HIPAA, PCI).
+# Each table gets its own rule so payloads are
+# independently routed and logged.
+
+pg_connection: "host=db.internal.example.com port=5432 dbname=production user=replicator"
+replication_slot: "audit_trail_slot"
+publication: "audit_trail_pub"
+
+rules:
+  - table: "users"
+    op_type: "*"
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://audit.example.com/events"
+      headers:
+        X-Source-Table: "users"
+        Authorization: "Bearer prod_audit_key"
+
+  - table: "payment_methods"
+    op_type: "*"
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://audit.example.com/events"
+      headers:
+        X-Source-Table: "payment_methods"
+        Authorization: "Bearer prod_audit_key"
+
+  - table: "api_keys"
+    op_type: "*"
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://audit.example.com/events"
+      headers:
+        X-Source-Table: "api_keys"
+        Authorization: "Bearer prod_audit_key"
+
+  # Alert on critical table modifications
+  - table: "roles"
+    op_type: "*"
+    conditions: []
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/PROD/xxxxx"
+      channel: "#security-audit"

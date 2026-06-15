@@ -1,0 +1,32 @@
+# ──────────────────────────────────────────────
+# BEGINNER: Post new orders to a Slack channel
+# ──────────────────────────────────────────────
+# What it does:
+#   1. Connects to your local Postgres
+#   2. Watches the "orders" table for new rows
+#   3. Posts to Slack when an order is inserted
+#
+# Prerequisites:
+#   - Postgres with wal_level = logical
+#   - A Slack webhook URL
+#       (https://api.slack.com/messaging/webhooks)
+#   - Your table should exist:
+#       CREATE TABLE orders (
+#         id SERIAL PRIMARY KEY,
+#         customer TEXT,
+#         total NUMERIC,
+#         status TEXT DEFAULT 'pending'
+#       );
+
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "beginner_slack_slot"
+publication: "beginner_slack_pub"
+
+rules:
+  - table: "orders"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/B00/xxxxx"
+      channel: "#orders"

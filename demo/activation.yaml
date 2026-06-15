@@ -1,0 +1,76 @@
+# ──────────────────────────────────────────────────────────────
+# Demo configuration for realtime-activation-engine
+# ──────────────────────────────────────────────────────────────
+# This file is mounted into the engine container at runtime.
+# It watches three tables and sends events to the local
+# webhook-display server.
+
+pg_connection: "host=postgres port=5432 dbname=activation_demo user=postgres password=postgres"
+replication_slot: "demo_slot"
+publication: "demo_pub"
+
+rules:
+  # ── 1. User plan upgrade → webhook ──
+  - table: "users"
+    op_type: Update
+    conditions:
+      - field: "plan"
+        old_value: "free"
+        new_value: "premium"
+    destination:
+      type: webhook
+      url: "http://webhook-display:8080/events"
+      headers:
+        X-Event-Type: "user.upgraded"
+
+  # ── 2. New order → webhook ──
+  - table: "orders"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: webhook
+      url: "http://webhook-display:8080/events"
+      headers:
+        X-Event-Type: "order.created"
+
+  # ── 3. Inventory low stock → webhook ──
+  - table: "inventory"
+    op_type: Update
+    conditions:
+      - field: "quantity"
+        new_value: "5"
+    destination:
+      type: webhook
+      url: "http://webhook-display:8080/events"
+      headers:
+        X-Event-Type: "inventory.low_stock"
+
+  # ── 4. Order status change → webhook ──
+  - table: "orders"
+    op_type: Update
+    conditions: []
+    destination:
+      type: webhook
+      url: "http://webhook-display:8080/events"
+      headers:
+        X-Event-Type: "order.status_changed"
+
+  # ── 5. User deletion → webhook ──
+  - table: "users"
+    op_type: Delete
+    conditions: []
+    destination:
+      type: webhook
+      url: "http://webhook-display:8080/events"
+      headers:
+        X-Event-Type: "user.deleted"
+
+  # ── 6. New order → Telegram ──
+  - table: "orders"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: telegram
+      url: "https://api.telegram.org/bot${telegram_bot_token}/sendMessage"
+      headers:
+        chat_id: "${telegram_chat_id}"

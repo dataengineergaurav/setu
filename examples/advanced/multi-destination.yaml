@@ -1,0 +1,35 @@
+# ──────────────────────────────────────────────
+# ADVANCED: Same event → multiple destinations
+# ──────────────────────────────────────────────
+# Routes the same database change to multiple
+# downstream targets. Postgres WAL events are
+# evaluated independently against each rule, so
+# you can fan out by defining repeating rules.
+#
+# Note: You cannot yet reference the same event
+# in a single rule with two destinations. Instead,
+# duplicate the rule for each target.
+
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "advanced_fanout_slot"
+publication: "advanced_fanout_pub"
+
+rules:
+  # ── Webhook to CRM ──
+  - table: "invoices"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://crm.example.com/invoice-created"
+      headers:
+        X-Source: "realtime-activation-engine"
+
+  # ── Slack to accounting channel ──
+  - table: "invoices"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/B00/xxxxx"
+      channel: "#accounting"

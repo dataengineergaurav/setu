@@ -1,0 +1,32 @@
+# ──────────────────────────────────────────────
+# BEGINNER: Fire a webhook on user signup
+# ──────────────────────────────────────────────
+# What it does:
+#   1. Watches the "users" table
+#   2. Fires a webhook when a new user signs up
+#   3. Sends the full new row as JSON payload
+#
+# Prerequisites:
+#   - Postgres with wal_level = logical
+#   - A webhook endpoint (e.g., a cloud function)
+#   - Your table:
+#       CREATE TABLE users (
+#         id SERIAL PRIMARY KEY,
+#         email TEXT NOT NULL,
+#         name TEXT,
+#         status TEXT DEFAULT 'active'
+#       );
+
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "beginner_webhook_slot"
+publication: "beginner_webhook_pub"
+
+rules:
+  - table: "users"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://api.example.com/webhooks/user-signup"
+      headers:
+        Content-Type: "application/json"

@@ -1,0 +1,71 @@
+# ──────────────────────────────────────────────────────────────────────
+# realtime-activation-engine Demo
+# ──────────────────────────────────────────────────────────────────────
+# Spins up:
+#   1. PostgreSQL 16 with logical replication enabled
+#   2. realtime-activation-engine (built from local source)
+#   3. Webhook Display — a simple HTTP server that logs events + HTML UI
+#
+# Usage:
+#   docker compose -f demo/docker-compose.yml up --build
+#
+# Then open http://localhost:8080 to see events arrive in real time.
+#
+# To seed test data (in another terminal):
+#   docker compose -f demo/docker-compose.yml exec postgres \
+#     psql -U postgres -d activation_demo -f /docker-entrypoint-initdb.d/seed.sql
+# ──────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pg-activation-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: activation_demo
+    ports:
+      - "5432:5432"
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d activation_demo"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data:/var/lib/postgresql/data
+
+  webhook-display:
+    build:
+      context: ./webhook-receiver
+      dockerfile: Dockerfile
+    container_name: pg-activation-display
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  engine:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: realtime-activation-engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+      webhook-display:
+        condition: service_started
+    environment:
+      RUST_LOG: info
+    volumes:
+      - ./activation.yaml:/app/activation.yaml
+      - ./channels-env.yml:/app/channels-env.yml

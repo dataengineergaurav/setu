@@ -1,0 +1,16 @@
+# ──────────────────────────────────────────────
+# Example: Secrets & environment variables
+# ──────────────────────────────────────────────
+# This is a template. Copy it to channels-env.yml
+# (which IS in .gitignore) and fill in your real tokens:
+#
+#   cp example-channels-env.yml channels-env.yml
+#
+# Then reference them in activation.yaml:
+#   url: "https://api.telegram.org/bot${telegram_bot_token}/sendMessage"
+#
+# Example values (replace with your own):
+#   telegram_bot_token: "8817138382:ABCdef..."
+#   telegram_chat_id: "123456789"
+#   slack_webhook_url: "https://hooks.slack.com/services/..."
+#   api_key: "whsec_your_webhook_secret"

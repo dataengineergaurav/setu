@@ -1,0 +1,24 @@
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "activation_engine_slot"
+publication: "activation_engine_pub"
+
+rules:
+  - table: "users"
+    op_type: Update
+    conditions:
+      - field: "status"
+        old_value: "active"
+        new_value: "premium"
+    destination:
+      type: webhook
+      url: "https://hooks.example.com/user-upgraded"
+      headers:
+        Authorization: "Bearer YOUR_WEBHOOK_SECRET"
+
+  - table: "orders"
+    op_type: Insert
+    conditions: []
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/B00/xxxxx"
+      channel: "#orders"

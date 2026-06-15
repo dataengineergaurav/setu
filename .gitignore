@@ -1,0 +1,26 @@
+# Rust build artifacts
+/target/
+
+# Secrets — contains real tokens, never commit
+# Copy example-channels-env.yml → channels-env.yml and fill in your values
+channels-env.yml
+
+# Demo PostgreSQL data directory (bind mount from docker-compose)
+demo/data/
+
+# Demo secrets (holds real tokens)
+demo/channels-env.yml
+
+# macOS
+.DS_Store
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/

@@ -1,0 +1,102 @@
+# ──────────────────────────────────────────────
+# EXPERT: Production-ready deployment
+# ──────────────────────────────────────────────
+# This config is designed for a real production
+# environment with multiple services depending
+# on real-time database changes.
+#
+# Features demonstrated:
+#   - Multiple tables, conditions, destinations
+#   - Targeted field comparisons (old vs new)
+#   - Numeric thresholds on conditions
+#   - Wildcard op_type to catch every change
+#   - Separate slot per environment or region
+#
+# Production checklist:
+#   ☐ wal_level = logical (ALTER SYSTEM, reload)
+#   ☐ REPLICA IDENTITY FULL on watched tables
+#   ☐ Dedicated Postgres replication user
+#   ☐ RUST_LOG=info (production) / debug (debugging)
+#   ☐ Idempotent downstream handlers (for duplicates)
+#   ☐ Monitor LSN lag: pg_replication_slots view
+#   ☐ Set PG "max_replication_slots" >= your slots
+
+pg_connection: "host=db.internal.example.com port=5432 dbname=production user=replicator"
+replication_slot: "prod_activation_slot"
+publication: "prod_activation_pub"
+
+rules:
+  # ── Customer lifecycle ──
+  # When a user upgrades to premium, push to CRM + Slack
+  - table: "users"
+    op_type: Update
+    conditions:
+      - field: "plan"
+        old_value: "free"
+        new_value: "premium"
+    destination:
+      type: webhook
+      url: "https://crm.example.com/api/events"
+      headers:
+        X-Event: "user.upgraded"
+        Authorization: "Bearer prod_crm_token"
+
+  # ── High-value order detection ──
+  # Orders above $1000 trigger Slack + downstream reporting
+  - table: "orders"
+    op_type: Insert
+    conditions:
+      - field: "amount_cents"
+        new_value: "100000"
+    destination:
+      type: webhook
+      url: "https://analytics.example.com/events/high-value-order"
+      headers:
+        Authorization: "Bearer prod_analytics_key"
+
+  # Also notify the sales Slack
+  - table: "orders"
+    op_type: Insert
+    conditions:
+      - field: "amount_cents"
+        new_value: "100000"
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/PROD/xxxxx"
+      channel: "#sales-alerts"
+
+  # ── Payment failure alert ──
+  - table: "payments"
+    op_type: Update
+    conditions:
+      - field: "status"
+        old_value: "processing"
+        new_value: "failed"
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/PROD/xxxxx"
+      channel: "#payments-emergency"
+
+  # ── Inventory threshold ──
+  - table: "inventory"
+    op_type: Update
+    conditions:
+      - field: "quantity"
+        new_value: "10"
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/PROD/xxxxx"
+      channel: "#warehouse"
+
+  # ── Full-audit: stripe_integration table ──
+  # Any change (insert/update/delete) is sent to
+  # our audit pipeline for compliance.
+  - table: "stripe_integration"
+    op_type: "*"
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://audit.example.com/events"
+      headers:
+        X-Event-Type: "stripe.*"
+        Authorization: "Bearer prod_audit_key"

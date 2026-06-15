@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────
+# ADVANCED: Alert on row deletion
+# ──────────────────────────────────────────────
+# Some tables should never have rows deleted
+# without manual review. This config watches
+# for deletes on critical tables and sends an
+# alert to a security Slack channel.
+#
+# Requires REPLICA IDENTITY FULL on the table
+# so old_row data is available.
+
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "advanced_delete_guard_slot"
+publication: "advanced_delete_guard_pub"
+
+rules:
+  - table: "audit_log"
+    op_type: Delete
+    conditions: []
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/B00/xxxxx"
+      channel: "#security-alerts"
+
+  - table: "payment_transactions"
+    op_type: Delete
+    conditions: []
+    destination:
+      type: webhook
+      url: "https://security.example.com/audit/flag"
+      headers:
+        X-Severity: "critical"
+        Authorization: "Bearer YOUR_SECURITY_KEY"

@@ -1,0 +1,50 @@
+# ──────────────────────────────────────────────
+# ADVANCED: Track state transitions
+# ──────────────────────────────────────────────
+# Tracks specific status changes on the users
+# table and routes each transition to a different
+# webhook endpoint for downstream processing.
+
+pg_connection: "host=localhost port=5432 dbname=mydb user=postgres"
+replication_slot: "advanced_state_slot"
+publication: "advanced_state_pub"
+
+rules:
+  # User upgrades to premium → CRM webhook
+  - table: "users"
+    op_type: Update
+    conditions:
+      - field: "status"
+        old_value: "active"
+        new_value: "premium"
+    destination:
+      type: webhook
+      url: "https://crm.example.com/upgrade"
+      headers:
+        X-Event-Type: "user.upgraded"
+        Authorization: "Bearer YOUR_CRM_SECRET"
+
+  # User goes inactive → engagement workflow
+  - table: "users"
+    op_type: Update
+    conditions:
+      - field: "status"
+        old_value: "active"
+        new_value: "inactive"
+    destination:
+      type: webhook
+      url: "https://engage.example.com/user-churn-risk"
+      headers:
+        X-Event-Type: "user.churn_risk"
+        Authorization: "Bearer YOUR_ENGAGE_SECRET"
+
+  # New high-value order → Slack alert + webhook
+  - table: "orders"
+    op_type: Insert
+    conditions:
+      - field: "total"
+        new_value: "1000"
+    destination:
+      type: slack
+      url: "https://hooks.slack.com/services/T00/B00/xxxxx"
+      channel: "#sales"
