@@ -94,6 +94,30 @@ fn build_payload(event: &DbEvent) -> serde_json::Value {
     serde_json::Value::Object(payload)
 }
 
+fn dest_config_from_def(def: &DestinationDef) -> DestinationConfig {
+    let kind = match def.kind.to_lowercase().as_str() {
+        "slack" => DestinationKind::Slack,
+        "telegram" => DestinationKind::Telegram,
+        _ => DestinationKind::Webhook,
+    };
+
+    let mut headers: Vec<(String, String)> = def
+        .headers
+        .as_ref()
+        .map(|h| h.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default();
+
+    if let Some(ref channel) = def.channel {
+        headers.push(("channel".into(), channel.clone()));
+    }
+
+    DestinationConfig {
+        kind,
+        url: def.url.clone(),
+        headers,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -263,29 +287,5 @@ mod tests {
         };
         let cfg = dest_config_from_def(&def);
         assert!(matches!(cfg.kind, DestinationKind::Telegram));
-    }
-}
-
-fn dest_config_from_def(def: &DestinationDef) -> DestinationConfig {
-    let kind = match def.kind.to_lowercase().as_str() {
-        "slack" => DestinationKind::Slack,
-        "telegram" => DestinationKind::Telegram,
-        _ => DestinationKind::Webhook,
-    };
-
-    let mut headers: Vec<(String, String)> = def
-        .headers
-        .as_ref()
-        .map(|h| h.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-        .unwrap_or_default();
-
-    if let Some(ref channel) = def.channel {
-        headers.push(("channel".into(), channel.clone()));
-    }
-
-    DestinationConfig {
-        kind,
-        url: def.url.clone(),
-        headers,
     }
 }

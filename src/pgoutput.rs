@@ -25,6 +25,12 @@ pub struct PgoutputDecoder {
     relations: HashMap<u32, RelationMeta>,
 }
 
+impl Default for PgoutputDecoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PgoutputDecoder {
     pub fn new() -> Self {
         Self {

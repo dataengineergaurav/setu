@@ -8,42 +8,10 @@ use crate::types::ActivationTask;
 
 const MAX_RETRIES: u32 = 3;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::types::{DestinationConfig, DestinationKind};
-
-    fn test_task() -> ActivationTask {
-        ActivationTask {
-            source_offset: "100".into(),
-            table_name: "users".into(),
-            op_type: crate::types::OpType::Insert,
-            payload: serde_json::json!({"id": 1}),
-            destination: DestinationConfig {
-                kind: DestinationKind::Slack,
-                url: "http://localhost:9999/nonexistent".into(),
-                headers: vec![("channel".into(), "#test".into())],
-            },
-        }
-    }
-
-    #[test]
-    fn retry_constant_is_three() {
-        assert_eq!(MAX_RETRIES, 3);
-    }
-
-    #[tokio::test]
-    async fn send_to_nonexistent_server_returns_false() {
-        let client = Client::builder().timeout(Duration::from_millis(100)).build().unwrap();
-        let ok = send(&test_task(), &client).await;
-        assert!(!ok);
-    }
-}
-
 pub async fn send(task: &ActivationTask, client: &Client) -> bool {
     let text = format!(
-        "`{}` event on `{}`\n```json\n{}\n```",
-        format!("{:?}", task.op_type),
+        "`{:?}` event on `{}`\n```json\n{}\n```",
+        task.op_type,
         task.table_name,
         serde_json::to_string_pretty(&task.payload).unwrap_or_default(),
     );
@@ -91,4 +59,36 @@ pub async fn send(task: &ActivationTask, client: &Client) -> bool {
         "Slack delivery exhausted after {MAX_RETRIES} attempts"
     );
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{DestinationConfig, DestinationKind};
+
+    fn test_task() -> ActivationTask {
+        ActivationTask {
+            source_offset: "100".into(),
+            table_name: "users".into(),
+            op_type: crate::types::OpType::Insert,
+            payload: serde_json::json!({"id": 1}),
+            destination: DestinationConfig {
+                kind: DestinationKind::Slack,
+                url: "http://localhost:9999/nonexistent".into(),
+                headers: vec![("channel".into(), "#test".into())],
+            },
+        }
+    }
+
+    #[test]
+    fn retry_constant_is_three() {
+        assert_eq!(MAX_RETRIES, 3);
+    }
+
+    #[tokio::test]
+    async fn send_to_nonexistent_server_returns_false() {
+        let client = Client::builder().timeout(Duration::from_millis(100)).build().unwrap();
+        let ok = send(&test_task(), &client).await;
+        assert!(!ok);
+    }
 }

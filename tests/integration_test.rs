@@ -350,9 +350,5 @@ rules:
 // 6. FILTER ENGINE LOGIC (no Postgres needed)
 //    Full pipeline: event → filter → activation task
 // ──────────────────────────────────────────────────────────────
-#[test]
-fn filter_engine_matches_yaml_rule() {
-    // Rule matching logic is thoroughly tested in src/filter/engine.rs unit tests.
-    // This integration test validates that the config structure round-trips correctly.
-    assert!(true, "config round-trip validated above");
-}
+// Rule matching logic is thoroughly tested in src/filter/engine.rs unit tests.
+// Config round-trip is validated above in parse_activation_yaml.

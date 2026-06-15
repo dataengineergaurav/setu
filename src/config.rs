@@ -88,6 +88,7 @@ impl ActivationConfig {
     }
 
     /// Resolve the connection info, preferring the `source` block over flat fields.
+    #[allow(dead_code)]
     pub fn pg_connection(&self) -> Option<&str> {
         match &self.source {
             Some(SourceDef::Postgres { connection, .. }) => Some(connection.as_str()),
@@ -96,6 +97,7 @@ impl ActivationConfig {
     }
 
     /// Resolve the replication slot name.
+    #[allow(dead_code)]
     pub fn replication_slot(&self) -> Option<&str> {
         match &self.source {
             Some(SourceDef::Postgres { replication_slot, .. }) => Some(replication_slot.as_str()),
@@ -104,6 +106,7 @@ impl ActivationConfig {
     }
 
     /// Resolve the publication name.
+    #[allow(dead_code)]
     pub fn publication(&self) -> Option<&str> {
         match &self.source {
             Some(SourceDef::Postgres { publication, .. }) => Some(publication.as_str()),
@@ -187,6 +190,7 @@ impl ActivationConfig {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_replication_config(&self) -> anyhow::Result<pgwire_replication::ReplicationConfig> {
         let pg_connection = self
             .pg_connection()
@@ -216,6 +220,80 @@ pub(crate) fn build_replication_config_from_parts(
         pgwire_replication::ReplicationConfig::new(host, user, password, dbname, replication_slot, publication)
             .with_port(port),
     )
+}
+
+fn resolve_string(s: &str, env: &HashMap<String, String>) -> String {
+    let mut result = s.to_string();
+    let mut start = 0;
+    loop {
+        let open = result[start..].find("${");
+        let Some(open) = open else {
+            break;
+        };
+        let open = start + open;
+        let close = result[open..].find('}').map(|c| open + c);
+        let Some(close) = close else {
+            warn!("Unclosed env var reference in: {}", s);
+            break;
+        };
+        let key = &result[open + 2..close];
+        match env.get(key) {
+            Some(val) => {
+                result.replace_range(open..=close, val);
+                start = open + val.len();
+            }
+            None => {
+                warn!("Unresolved env var: ${{{}}} in: {}", key, s);
+                start = close + 1;
+            }
+        }
+    }
+    result
+}
+
+pub(crate) fn parse_host(s: &str) -> Option<&str> {
+    for part in s.split_whitespace() {
+        if let Some(val) = part.strip_prefix("host=") {
+            return Some(val);
+        }
+    }
+    None
+}
+
+pub(crate) fn parse_port(s: &str) -> Option<u16> {
+    for part in s.split_whitespace() {
+        if let Some(val) = part.strip_prefix("port=") {
+            return val.parse().ok();
+        }
+    }
+    None
+}
+
+pub(crate) fn parse_dbname(s: &str) -> Option<&str> {
+    for part in s.split_whitespace() {
+        if let Some(val) = part.strip_prefix("dbname=") {
+            return Some(val);
+        }
+    }
+    None
+}
+
+pub(crate) fn parse_user(s: &str) -> Option<&str> {
+    for part in s.split_whitespace() {
+        if let Some(val) = part.strip_prefix("user=") {
+            return Some(val);
+        }
+    }
+    None
+}
+
+pub(crate) fn parse_password(s: &str) -> Option<&str> {
+    for part in s.split_whitespace() {
+        if let Some(val) = part.strip_prefix("password=") {
+            return Some(val);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -434,78 +512,4 @@ rules: []
         assert_eq!(repl.slot, "slot1");
         assert_eq!(repl.publication, "pub1");
     }
-}
-
-fn resolve_string(s: &str, env: &HashMap<String, String>) -> String {
-    let mut result = s.to_string();
-    let mut start = 0;
-    loop {
-        let open = result[start..].find("${");
-        let Some(open) = open else {
-            break;
-        };
-        let open = start + open;
-        let close = result[open..].find('}').map(|c| open + c);
-        let Some(close) = close else {
-            warn!("Unclosed env var reference in: {}", s);
-            break;
-        };
-        let key = &result[open + 2..close];
-        match env.get(key) {
-            Some(val) => {
-                result.replace_range(open..=close, val);
-                start = open + val.len();
-            }
-            None => {
-                warn!("Unresolved env var: ${{{}}} in: {}", key, s);
-                start = close + 1;
-            }
-        }
-    }
-    result
-}
-
-pub(crate) fn parse_host(s: &str) -> Option<&str> {
-    for part in s.split_whitespace() {
-        if let Some(val) = part.strip_prefix("host=") {
-            return Some(val);
-        }
-    }
-    None
-}
-
-pub(crate) fn parse_port(s: &str) -> Option<u16> {
-    for part in s.split_whitespace() {
-        if let Some(val) = part.strip_prefix("port=") {
-            return val.parse().ok();
-        }
-    }
-    None
-}
-
-pub(crate) fn parse_dbname(s: &str) -> Option<&str> {
-    for part in s.split_whitespace() {
-        if let Some(val) = part.strip_prefix("dbname=") {
-            return Some(val);
-        }
-    }
-    None
-}
-
-pub(crate) fn parse_user(s: &str) -> Option<&str> {
-    for part in s.split_whitespace() {
-        if let Some(val) = part.strip_prefix("user=") {
-            return Some(val);
-        }
-    }
-    None
-}
-
-pub(crate) fn parse_password(s: &str) -> Option<&str> {
-    for part in s.split_whitespace() {
-        if let Some(val) = part.strip_prefix("password=") {
-            return Some(val);
-        }
-    }
-    None
 }

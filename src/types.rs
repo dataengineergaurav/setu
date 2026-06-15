@@ -29,6 +29,7 @@ pub struct DbEvent {
     /// Source-specific position (Postgres LSN, MySQL binlog offset, …).
     pub source_offset: String,
     /// Identifies which source implementation produced this event.
+    #[allow(dead_code)]
     pub source_kind: SourceKind,
     pub table_name: String,
     pub op_type: OpType,
