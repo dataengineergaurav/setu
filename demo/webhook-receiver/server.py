@@ -65,8 +65,6 @@ EVENT_CARD = """\
     <strong class="table">{table}</strong>
     <span class="op-{op}">{op}</span>
     &middot;
-    LSN {lsn}
-    &middot;
     <code>{dest}</code>
   </div>
   <pre>{payload}</pre>
