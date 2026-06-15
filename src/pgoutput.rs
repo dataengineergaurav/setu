@@ -48,46 +48,42 @@ impl PgoutputDecoder {
                         break;
                     }
                 }
-                b'I' => {
-                    match self.parse_insert(p, wal_end) {
-                        Ok((event, consumed)) => {
-                            events.push(event);
-                            p = &p[consumed..];
-                        }
-                        Err(e) => {
-                            warn!(error = %e, "Failed to parse Insert message");
-                            break;
-                        }
+                b'I' => match self.parse_insert(p, wal_end) {
+                    Ok((event, consumed)) => {
+                        events.push(event);
+                        p = &p[consumed..];
                     }
-                }
-                b'U' => {
-                    match self.parse_update(p, wal_end) {
-                        Ok((event, consumed)) => {
-                            events.push(event);
-                            p = &p[consumed..];
-                        }
-                        Err(e) => {
-                            warn!(error = %e, "Failed to parse Update message");
-                            break;
-                        }
+                    Err(e) => {
+                        warn!(error = %e, "Failed to parse Insert message");
+                        break;
                     }
-                }
-                b'D' => {
-                    match self.parse_delete(p, wal_end) {
-                        Ok((event, consumed)) => {
-                            events.push(event);
-                            p = &p[consumed..];
-                        }
-                        Err(e) => {
-                            warn!(error = %e, "Failed to parse Delete message");
-                            break;
-                        }
+                },
+                b'U' => match self.parse_update(p, wal_end) {
+                    Ok((event, consumed)) => {
+                        events.push(event);
+                        p = &p[consumed..];
                     }
-                }
+                    Err(e) => {
+                        warn!(error = %e, "Failed to parse Update message");
+                        break;
+                    }
+                },
+                b'D' => match self.parse_delete(p, wal_end) {
+                    Ok((event, consumed)) => {
+                        events.push(event);
+                        p = &p[consumed..];
+                    }
+                    Err(e) => {
+                        warn!(error = %e, "Failed to parse Delete message");
+                        break;
+                    }
+                },
                 b'Y' => {
                     // Type message - skip: flags(u8), oid(u32), namespace(null-str), name(null-str)
                     let mut offset = 0;
-                    if p.len() < 5 { break; }
+                    if p.len() < 5 {
+                        break;
+                    }
                     offset += 1 + 4; // flags + oid
                     offset += null_str_len(&p[offset..]);
                     offset += null_str_len(&p[offset..]);
@@ -102,7 +98,9 @@ impl PgoutputDecoder {
                 b'T' => {
                     // Truncate message - skip for now
                     let mut offset = 0;
-                    if p.len() < 5 { break; }
+                    if p.len() < 5 {
+                        break;
+                    }
                     offset += 4; // rel_id
                     offset += 1; // flags
                     offset += 4; // n_rels
@@ -127,40 +125,55 @@ impl PgoutputDecoder {
     fn parse_relation(&mut self, data: &[u8]) -> Option<usize> {
         let mut offset = 0;
 
-        if data.len() < 8 { return None; }
+        if data.len() < 8 {
+            return None;
+        }
         let rel_id = u32::from_be_bytes(data[offset..offset + 4].try_into().ok()?);
         offset += 4;
 
         let ns_len = null_str_len(&data[offset..]);
-        if ns_len == 0 { return None; }
+        if ns_len == 0 {
+            return None;
+        }
         offset += ns_len;
 
         let name_len = null_str_len(&data[offset..]);
-        if name_len == 0 { return None; }
+        if name_len == 0 {
+            return None;
+        }
         let name = String::from_utf8_lossy(&data[offset..offset + name_len - 1]).to_string();
         offset += name_len;
 
-        if data.len() < offset + 1 { return None; }
+        if data.len() < offset + 1 {
+            return None;
+        }
         let _replica_identity = data[offset];
         offset += 1;
 
-        if data.len() < offset + 2 { return None; }
+        if data.len() < offset + 2 {
+            return None;
+        }
         let n_cols = u16::from_be_bytes(data[offset..offset + 2].try_into().ok()?);
         offset += 2;
 
         let mut columns = Vec::with_capacity(n_cols as usize);
         for _ in 0..n_cols {
-            if data.len() < offset + 1 { return None; }
+            if data.len() < offset + 1 {
+                return None;
+            }
             let _col_flags = data[offset];
             offset += 1;
 
             let col_name_len = null_str_len(&data[offset..]);
-            if col_name_len == 0 { return None; }
-            let col_name =
-                String::from_utf8_lossy(&data[offset..offset + col_name_len - 1]).to_string();
+            if col_name_len == 0 {
+                return None;
+            }
+            let col_name = String::from_utf8_lossy(&data[offset..offset + col_name_len - 1]).to_string();
             offset += col_name_len;
 
-            if data.len() < offset + 6 { return None; }
+            if data.len() < offset + 6 {
+                return None;
+            }
             let _type_oid = u32::from_be_bytes(data[offset..offset + 4].try_into().ok()?);
             offset += 4;
             let _type_mod = i32::from_be_bytes(data[offset..offset + 4].try_into().ok()?);
@@ -169,13 +182,7 @@ impl PgoutputDecoder {
             columns.push(ColumnMeta { name: col_name });
         }
 
-        self.relations.insert(
-            rel_id,
-            RelationMeta {
-                name,
-                columns,
-            },
-        );
+        self.relations.insert(rel_id, RelationMeta { name, columns });
 
         Some(offset)
     }
@@ -293,11 +300,7 @@ impl PgoutputDecoder {
         ))
     }
 
-    fn parse_tuple_data(
-        &self,
-        data: &[u8],
-        rel_id: u32,
-    ) -> Result<(serde_json::Value, usize), String> {
+    fn parse_tuple_data(&self, data: &[u8], rel_id: u32) -> Result<(serde_json::Value, usize), String> {
         if data.len() < 2 {
             return Err("TupleData: truncated n_cols".into());
         }
@@ -320,8 +323,7 @@ impl PgoutputDecoder {
                     if data.len() < offset + 4 {
                         return Err("TupleData: truncated text length".into());
                     }
-                    let len =
-                        u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
+                    let len = u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
                     offset += 4;
                     if data.len() < offset + len {
                         return Err("TupleData: truncated text data".into());
@@ -334,8 +336,7 @@ impl PgoutputDecoder {
                     if data.len() < offset + 4 {
                         return Err("TupleData: truncated binary length".into());
                     }
-                    let len =
-                        u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
+                    let len = u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
                     offset += 4;
                     offset += len;
                     serde_json::Value::Null
@@ -372,12 +373,7 @@ fn null_str_len(data: &[u8]) -> usize {
 }
 
 #[cfg(test)]
-fn build_relation_bytes(
-    rel_id: u32,
-    namespace: &str,
-    name: &str,
-    columns: &[(&str, u32, i32)],
-) -> Vec<u8> {
+fn build_relation_bytes(rel_id: u32, namespace: &str, name: &str, columns: &[(&str, u32, i32)]) -> Vec<u8> {
     let mut buf = vec![b'R'];
     buf.extend_from_slice(&rel_id.to_be_bytes());
     buf.extend_from_slice(namespace.as_bytes());
@@ -425,11 +421,7 @@ fn build_insert_bytes(rel_id: u32, values: &[Option<&str>]) -> Vec<u8> {
 }
 
 #[cfg(test)]
-fn build_update_bytes(
-    rel_id: u32,
-    old_values: Option<&[Option<&str>]>,
-    new_values: &[Option<&str>],
-) -> Vec<u8> {
+fn build_update_bytes(rel_id: u32, old_values: Option<&[Option<&str>]>, new_values: &[Option<&str>]) -> Vec<u8> {
     let mut buf = vec![b'U'];
     buf.extend_from_slice(&rel_id.to_be_bytes());
     if let Some(old) = old_values {
@@ -475,7 +467,13 @@ mod tests {
     fn test_parse_insert() {
         let mut decoder = PgoutputDecoder::new();
         let rel = build_relation_bytes(1, "public", "users", &users_columns());
-        let data = Bytes::from([rel.as_slice(), &build_insert_bytes(1, &[Some("1"), Some("Alice"), Some("alice@example.com")])].concat());
+        let data = Bytes::from(
+            [
+                rel.as_slice(),
+                &build_insert_bytes(1, &[Some("1"), Some("Alice"), Some("alice@example.com")]),
+            ]
+            .concat(),
+        );
         let events = decoder.decode(&data, 100);
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].op_type, OpType::Insert);
@@ -508,7 +506,11 @@ mod tests {
     #[test]
     fn test_parse_update_without_old() {
         let mut decoder = setup_decoder();
-        let data = Bytes::from(build_update_bytes(1, None, &[Some("1"), Some("Bob"), Some("bob@example.com")]));
+        let data = Bytes::from(build_update_bytes(
+            1,
+            None,
+            &[Some("1"), Some("Bob"), Some("bob@example.com")],
+        ));
         let events = decoder.decode(&data, 300);
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].op_type, OpType::Update);
@@ -518,7 +520,10 @@ mod tests {
     #[test]
     fn test_parse_delete_with_old() {
         let mut decoder = setup_decoder();
-        let data = Bytes::from(build_delete_bytes(1, Some(&[Some("42"), Some("Charlie"), Some("charlie@example.com")])));
+        let data = Bytes::from(build_delete_bytes(
+            1,
+            Some(&[Some("42"), Some("Charlie"), Some("charlie@example.com")]),
+        ));
         let events = decoder.decode(&data, 400);
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].op_type, OpType::Delete);
@@ -604,4 +609,3 @@ mod tests {
         assert_eq!(del[0], b'D');
     }
 }
-

@@ -5,9 +5,9 @@
 //! secrets file, and can produce an [`ingress::SourceConfig`] for the
 //! ingress factory.
 
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
-use serde::Deserialize;
 use tracing::{info, warn};
 
 use crate::ingress::SourceConfig;
@@ -117,40 +117,47 @@ impl ActivationConfig {
     /// connection fields are missing.
     pub fn to_source_config(&self) -> anyhow::Result<SourceConfig> {
         match &self.source {
-            Some(SourceDef::Postgres { connection, replication_slot, publication }) => {
-                Ok(SourceConfig::Postgres {
-                    pg_connection: connection.clone(),
-                    replication_slot: replication_slot.clone(),
-                    publication: publication.clone(),
-                })
-            }
+            Some(SourceDef::Postgres {
+                connection,
+                replication_slot,
+                publication,
+            }) => Ok(SourceConfig::Postgres {
+                pg_connection: connection.clone(),
+                replication_slot: replication_slot.clone(),
+                publication: publication.clone(),
+            }),
             None => {
-                let pg_connection = self.pg_connection
+                let pg_connection = self
+                    .pg_connection
                     .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!(
-                        "missing pg_connection and no source block in activation.yaml"
-                    ))?
+                    .ok_or_else(|| anyhow::anyhow!("missing pg_connection and no source block in activation.yaml"))?
                     .clone();
-                let replication_slot = self.replication_slot
+                let replication_slot = self
+                    .replication_slot
                     .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!(
-                        "missing replication_slot and no source block in activation.yaml"
-                    ))?
+                    .ok_or_else(|| anyhow::anyhow!("missing replication_slot and no source block in activation.yaml"))?
                     .clone();
-                let publication = self.publication
+                let publication = self
+                    .publication
                     .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!(
-                        "missing publication and no source block in activation.yaml"
-                    ))?
+                    .ok_or_else(|| anyhow::anyhow!("missing publication and no source block in activation.yaml"))?
                     .clone();
-                Ok(SourceConfig::Postgres { pg_connection, replication_slot, publication })
+                Ok(SourceConfig::Postgres {
+                    pg_connection,
+                    replication_slot,
+                    publication,
+                })
             }
         }
     }
 
     fn resolve_env_vars(&mut self, env: &HashMap<String, String>) {
         match &mut self.source {
-            Some(SourceDef::Postgres { connection, replication_slot, publication }) => {
+            Some(SourceDef::Postgres {
+                connection,
+                replication_slot,
+                publication,
+            }) => {
                 *connection = resolve_string(connection, env);
                 *replication_slot = resolve_string(replication_slot, env);
                 *publication = resolve_string(publication, env);
@@ -170,11 +177,7 @@ impl ActivationConfig {
 
         for rule in &mut self.rules {
             rule.destination.url = resolve_string(&rule.destination.url, env);
-            rule.destination.channel = rule
-                .destination
-                .channel
-                .as_ref()
-                .map(|c| resolve_string(c, env));
+            rule.destination.channel = rule.destination.channel.as_ref().map(|c| resolve_string(c, env));
             if let Some(ref mut headers) = rule.destination.headers {
                 *headers = headers
                     .drain()
@@ -185,11 +188,14 @@ impl ActivationConfig {
     }
 
     pub fn to_replication_config(&self) -> anyhow::Result<pgwire_replication::ReplicationConfig> {
-        let pg_connection = self.pg_connection()
+        let pg_connection = self
+            .pg_connection()
             .ok_or_else(|| anyhow::anyhow!("no pg_connection configured"))?;
-        let slot = self.replication_slot()
+        let slot = self
+            .replication_slot()
             .ok_or_else(|| anyhow::anyhow!("no replication_slot configured"))?;
-        let pub_name = self.publication()
+        let pub_name = self
+            .publication()
             .ok_or_else(|| anyhow::anyhow!("no publication configured"))?;
         build_replication_config_from_parts(pg_connection, slot, pub_name)
     }
@@ -206,15 +212,10 @@ pub(crate) fn build_replication_config_from_parts(
     let user = parse_user(pg_connection).unwrap_or("postgres");
     let password = parse_password(pg_connection).unwrap_or("");
 
-    Ok(pgwire_replication::ReplicationConfig::new(
-        host,
-        user,
-        password,
-        dbname,
-        replication_slot,
-        publication,
+    Ok(
+        pgwire_replication::ReplicationConfig::new(host, user, password, dbname, replication_slot, publication)
+            .with_port(port),
     )
-    .with_port(port))
 }
 
 #[cfg(test)]
@@ -247,7 +248,10 @@ rules:
       channel: '#sales'
 ";
         let cfg: ActivationConfig = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(cfg.pg_connection.as_deref(), Some("host=db.example.com port=5432 dbname=proddb user=admin password=secret"));
+        assert_eq!(
+            cfg.pg_connection.as_deref(),
+            Some("host=db.example.com port=5432 dbname=proddb user=admin password=secret")
+        );
         assert_eq!(cfg.replication_slot.as_deref(), Some("my_slot"));
         assert_eq!(cfg.publication.as_deref(), Some("my_pub"));
         assert_eq!(cfg.rules.len(), 2);
@@ -257,11 +261,20 @@ rules:
         assert_eq!(first.op_type, "Update");
         assert_eq!(first.conditions.len(), 1);
         assert_eq!(first.conditions[0].field, "status");
-        assert_eq!(first.conditions[0].old_value.as_ref().and_then(|v| v.as_str()), Some("active"));
-        assert_eq!(first.conditions[0].new_value.as_ref().and_then(|v| v.as_str()), Some("premium"));
+        assert_eq!(
+            first.conditions[0].old_value.as_ref().and_then(|v| v.as_str()),
+            Some("active")
+        );
+        assert_eq!(
+            first.conditions[0].new_value.as_ref().and_then(|v| v.as_str()),
+            Some("premium")
+        );
         assert_eq!(first.destination.kind, "webhook");
         assert_eq!(first.destination.url, "https://hook.example.com/upgrade");
-        assert_eq!(first.destination.headers.as_ref().unwrap().get("X-Key").unwrap(), "abc123");
+        assert_eq!(
+            first.destination.headers.as_ref().unwrap().get("X-Key").unwrap(),
+            "abc123"
+        );
 
         let second = &cfg.rules[1];
         assert_eq!(second.table, "orders");
@@ -338,9 +351,18 @@ rules:
         env.insert("API_KEY".into(), "secret-123".into());
         cfg.resolve_env_vars(&env);
 
-        assert_eq!(cfg.pg_connection.as_deref(), Some("host=db.internal.com dbname=mydb user=admin"));
+        assert_eq!(
+            cfg.pg_connection.as_deref(),
+            Some("host=db.internal.com dbname=mydb user=admin")
+        );
         assert_eq!(cfg.rules[0].destination.url, "https://api.example.com/hook");
-        let auth = cfg.rules[0].destination.headers.as_ref().unwrap().get("Authorization").unwrap();
+        let auth = cfg.rules[0]
+            .destination
+            .headers
+            .as_ref()
+            .unwrap()
+            .get("Authorization")
+            .unwrap();
         assert_eq!(auth, "Bearer secret-123");
     }
 

@@ -12,17 +12,11 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
-        )
+        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
     let cfg = config::ActivationConfig::from_file("activation.yaml")?;
-    info!(
-        "Loaded activation configuration with {} rules",
-        cfg.rules.len()
-    );
+    info!("Loaded activation configuration with {} rules", cfg.rules.len());
 
     // Channel capacities enforce backpressure per architecture design
     let (event_tx, event_rx) = mpsc::channel::<types::DbEvent>(1024);
@@ -57,15 +51,9 @@ async fn main() -> anyhow::Result<()> {
         let mut task_rx = egress_task_rx;
         while let Some(task) = task_rx.recv().await {
             let success = match task.destination.kind {
-                types::DestinationKind::Webhook => {
-                    egress::webhook::send(&task, &client).await
-                }
-                types::DestinationKind::Slack => {
-                    egress::slack::send(&task, &client).await
-                }
-                types::DestinationKind::Telegram => {
-                    egress::telegram::send(&task, &client).await
-                }
+                types::DestinationKind::Webhook => egress::webhook::send(&task, &client).await,
+                types::DestinationKind::Slack => egress::slack::send(&task, &client).await,
+                types::DestinationKind::Telegram => egress::telegram::send(&task, &client).await,
             };
 
             if success {

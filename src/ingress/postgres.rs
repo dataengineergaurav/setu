@@ -23,7 +23,11 @@ pub struct PostgresSource {
 
 impl PostgresSource {
     pub fn new(pg_connection: String, replication_slot: String, publication: String) -> Self {
-        Self { pg_connection, replication_slot, publication }
+        Self {
+            pg_connection,
+            replication_slot,
+            publication,
+        }
     }
 }
 
@@ -60,11 +64,8 @@ async fn try_connect(
 ) -> anyhow::Result<()> {
     ensure_slot_and_publication(source).await?;
 
-    let repl_config = build_replication_config_from_parts(
-        &source.pg_connection,
-        &source.replication_slot,
-        &source.publication,
-    )?;
+    let repl_config =
+        build_replication_config_from_parts(&source.pg_connection, &source.replication_slot, &source.publication)?;
     let mut client = ReplicationClient::connect(repl_config).await?;
     info!("Connected to PostgreSQL replication stream");
 
@@ -144,10 +145,7 @@ async fn ensure_slot_and_publication(source: &PostgresSource) -> anyhow::Result<
 
     if !pub_exists {
         client
-            .simple_query(&format!(
-                "CREATE PUBLICATION \"{}\" FOR ALL TABLES",
-                source.publication
-            ))
+            .simple_query(&format!("CREATE PUBLICATION \"{}\" FOR ALL TABLES", source.publication))
             .await?;
         info!(publication = %source.publication, "Publication created");
     } else {

@@ -15,8 +15,7 @@ use pgwire_replication::lsn::Lsn;
 
 // ── Helper: parse DATABASE_URL env var ──
 fn db_url() -> String {
-    std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "host=localhost port=5432 dbname=postgres user=postgres".into())
+    std::env::var("DATABASE_URL").unwrap_or_else(|_| "host=localhost port=5432 dbname=postgres user=postgres".into())
 }
 
 fn db_host() -> String {
@@ -76,11 +75,7 @@ async fn postgres_is_reachable() {
         .expect("Failed to connect to Postgres. Set DATABASE_URL env var.");
     tokio::spawn(conn);
 
-    let wal_level: String = client
-        .query_one("SHOW wal_level", &[])
-        .await
-        .unwrap()
-        .get(0);
+    let wal_level: String = client.query_one("SHOW wal_level", &[]).await.unwrap().get(0);
     assert_eq!(
         wal_level, "logical",
         "wal_level must be 'logical'. Run: ALTER SYSTEM SET wal_level = logical; SELECT pg_reload_conf();"
@@ -94,9 +89,7 @@ async fn postgres_is_reachable() {
 #[ignore = "requires running PostgreSQL with logical replication"]
 #[tokio::test]
 async fn create_and_drop_replication_slot() {
-    let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls)
-        .await
-        .unwrap();
+    let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls).await.unwrap();
     tokio::spawn(conn);
 
     let slot_name = "test_slot_integration";
@@ -140,9 +133,7 @@ async fn replication_client_connects_and_streams() {
 
     // Ensure slot exists
     {
-        let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls)
-            .await
-            .unwrap();
+        let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls).await.unwrap();
         tokio::spawn(conn);
 
         let exists: bool = client
@@ -208,9 +199,7 @@ async fn replication_client_connects_and_streams() {
     let _ = client.shutdown().await;
 
     // Drop slot
-    let (cleanup, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls)
-        .await
-        .unwrap();
+    let (cleanup, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls).await.unwrap();
     tokio::spawn(conn);
     let _ = cleanup
         .simple_query(&format!("SELECT pg_drop_replication_slot('{slot_name}')"))
@@ -233,9 +222,7 @@ async fn pgoutput_decoder_integration() {
     let slot_name = "test_parser_integration";
 
     // Setup: create table, slot, publication
-    let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls)
-        .await
-        .unwrap();
+    let (client, conn) = tokio_postgres::connect(&db_url(), tokio_postgres::NoTls).await.unwrap();
     tokio::spawn(conn);
 
     client
@@ -269,9 +256,7 @@ async fn pgoutput_decoder_integration() {
     .with_port(db_port())
     .with_start_lsn(Lsn::ZERO);
 
-    let mut repl = pgwire_replication::ReplicationClient::connect(config)
-        .await
-        .unwrap();
+    let mut repl = pgwire_replication::ReplicationClient::connect(config).await.unwrap();
 
     // Insert a row to generate a WAL event
     client
@@ -348,8 +333,7 @@ rules:
       url: "https://hooks.example.com/upgrade"
 "#;
 
-    let cfg: realtime_activation_engine::config::ActivationConfig =
-        serde_yaml::from_str(yaml).unwrap();
+    let cfg: realtime_activation_engine::config::ActivationConfig = serde_yaml::from_str(yaml).unwrap();
 
     assert_eq!(cfg.rules.len(), 1);
     assert_eq!(cfg.rules[0].table, "users");

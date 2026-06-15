@@ -34,10 +34,7 @@ mod tests {
 
     #[tokio::test]
     async fn send_to_nonexistent_server_returns_false() {
-        let client = Client::builder()
-            .timeout(Duration::from_millis(100))
-            .build()
-            .unwrap();
+        let client = Client::builder().timeout(Duration::from_millis(100)).build().unwrap();
         let ok = send(&test_task(), &client).await;
         assert!(!ok);
     }
@@ -62,12 +59,7 @@ pub async fn send(task: &ActivationTask, client: &Client) -> bool {
     let mut last_error = String::new();
 
     for attempt in 1..=MAX_RETRIES {
-        match client
-            .post(&task.destination.url)
-            .json(&slack_payload)
-            .send()
-            .await
-        {
+        match client.post(&task.destination.url).json(&slack_payload).send().await {
             Ok(resp) if resp.status().is_success() => {
                 info!(
                     table = %task.table_name,

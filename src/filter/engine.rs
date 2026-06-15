@@ -1,7 +1,7 @@
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
-use crate::config::{Rule, DestinationDef};
+use crate::config::{DestinationDef, Rule};
 use crate::types::{ActivationTask, DbEvent, DestinationConfig, DestinationKind, OpType};
 
 pub async fn run(
@@ -11,10 +11,7 @@ pub async fn run(
     rules: Vec<Rule>,
 ) {
     while let Some(event) = event_rx.recv().await {
-        let matched_rules: Vec<&Rule> = rules
-            .iter()
-            .filter(|r| matches_rule(r, &event))
-            .collect();
+        let matched_rules: Vec<&Rule> = rules.iter().filter(|r| matches_rule(r, &event)).collect();
 
         if matched_rules.is_empty() {
             debug!(table = %event.table_name, "No rules matched, releasing LSN");
@@ -60,14 +57,8 @@ fn matches_rule(rule: &Rule, event: &DbEvent) -> bool {
     }
 
     for condition in &rule.conditions {
-        let old_field = event
-            .old_row
-            .as_ref()
-            .and_then(|r| r.get(&condition.field));
-        let new_field = event
-            .new_row
-            .as_ref()
-            .and_then(|r| r.get(&condition.field));
+        let old_field = event.old_row.as_ref().and_then(|r| r.get(&condition.field));
+        let new_field = event.new_row.as_ref().and_then(|r| r.get(&condition.field));
 
         let old_matches = condition
             .old_value
@@ -110,7 +101,14 @@ mod tests {
     use crate::types::SourceKind;
 
     fn make_event(table: &str, op: OpType, old: Option<serde_json::Value>, new: Option<serde_json::Value>) -> DbEvent {
-        DbEvent { source_offset: "0".into(), source_kind: SourceKind::Postgres, table_name: table.into(), op_type: op, old_row: old, new_row: new }
+        DbEvent {
+            source_offset: "0".into(),
+            source_kind: SourceKind::Postgres,
+            table_name: table.into(),
+            op_type: op,
+            old_row: old,
+            new_row: new,
+        }
     }
 
     fn make_rule(table: &str, op: &str, conditions: Vec<Condition>) -> Rule {

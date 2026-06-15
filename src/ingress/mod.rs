@@ -31,13 +31,15 @@ pub enum SourceConfig {
 /// Create and return an [`IngressSource`] based on the given [`SourceConfig`].
 pub fn create_source(config: SourceConfig) -> Box<dyn IngressSource> {
     match config {
-        SourceConfig::Postgres { pg_connection, replication_slot, publication } => {
-            Box::new(postgres::PostgresSource::new(
-                pg_connection,
-                replication_slot,
-                publication,
-            ))
-        }
+        SourceConfig::Postgres {
+            pg_connection,
+            replication_slot,
+            publication,
+        } => Box::new(postgres::PostgresSource::new(
+            pg_connection,
+            replication_slot,
+            publication,
+        )),
     }
 }
 
