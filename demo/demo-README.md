@@ -1,4 +1,4 @@
-# realtime-activation-engine Demo
+# setu Demo
 
 A fully containerized demo that runs everything with a single command.
 
@@ -23,7 +23,7 @@ Watch events appear in real time at `http://localhost:8080`.
 | Service | Container | Purpose |
 |---|---|---|
 | PostgreSQL 16 | `pg-activation-db` | Database with `wal_level=logical` and demo tables |
-| realtime-activation-engine | `realtime-activation-engine` | The WAL reader, filter, and delivery engine |
+| setu | `setu` | The WAL reader, filter, and delivery engine |
 | Webhook Display | `pg-activation-display` | HTTP server showing received events in a web UI |
 
 ## Demo Walkthrough
@@ -128,7 +128,7 @@ docker compose -f demo/docker-compose.yml restart engine
 
 ```
                 WAL stream
-Postgres ──────────────────> realtime-activation-engine ──HTTP──> Webhook Display
+Postgres ──────────────────> setu ──HTTP──> Webhook Display
   ▲                              │                          (localhost:8080)
   │                              │
   └──── LSN feedback loop ───────┘

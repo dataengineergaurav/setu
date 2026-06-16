@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────
-# Demo configuration for realtime-activation-engine
+# Demo configuration for setu
 # ──────────────────────────────────────────────────────────────
 # This file is mounted into the engine container at runtime.
 # It watches three tables and sends events to the local

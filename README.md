@@ -1,10 +1,10 @@
-# realtime-activation-engine
+# setu
 
 Real-time data activation from database change streams. Watch specific column changes and fire **webhooks**, **Slack**, or **Telegram** notifications the instant they happen — zero polling, no middleware.
 
 ```text
 +--------------------------------------------------------------------------------------+
-|                             realtime-activation-engine                                |
+|                             setu                                |
 |                                                                                      |
 |  +--------------------+      +--------------------+      +----------------------+    |
 |  |                    |      |                    |      |                      |    |
@@ -36,7 +36,7 @@ Real-time data activation from database change streams. Watch specific column ch
 
 ```bash
 git clone <repo>
-cd realtime-activation-engine
+cd setu
 
 # Start the full demo stack
 docker compose -f demo/docker-compose.yml up --build -d
@@ -63,7 +63,7 @@ cp activation.yaml my-config.yaml
 # Edit pg_connection, rules, destinations...
 
 # Run
-RUST_LOG=info ./target/release/realtime-activation-engine
+RUST_LOG=info ./target/release/setu
 ```
 
 ## Requirements
@@ -274,7 +274,7 @@ The stack includes:
 | Service | Container | Purpose |
 |---|---|---|
 | PostgreSQL 16 | `pg-activation-db` | Configured with `wal_level=logical` |
-| realtime-activation-engine | `realtime-activation-engine` | Ingress source + filter + delivery |
+| setu | `setu` | Ingress source + filter + delivery |
 | Webhook Display | `pg-activation-display` | Python HTTP server with live HTML dashboard |
 
 When you seed data, five sample DB changes trigger six rules — five webhook events on the dashboard plus one Telegram notification:
@@ -375,13 +375,13 @@ cargo test --lib
 cargo build --release
 
 # Run with debug logging
-RUST_LOG=debug ./target/release/realtime-activation-engine
+RUST_LOG=debug ./target/release/setu
 ```
 
 ### Building for Docker
 
 ```bash
-docker build -f demo/Dockerfile -t realtime-activation-engine .
+docker build -f demo/Dockerfile -t setu .
 ```
 
 The Dockerfile uses a multi-stage build with `alpine:3.19` runtime (rustls-backed, no OpenSSL dependency).

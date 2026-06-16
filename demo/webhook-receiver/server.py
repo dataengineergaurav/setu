@@ -1,5 +1,5 @@
 """
-realtime-activation-engine Demo — Webhook Display Server
+setu Demo — Webhook Display Server
 
 Receives POST /events from the engine, appends them to an in-memory
 list, prints each event to stdout, and serves a real-time HTML page
@@ -28,7 +28,7 @@ PAGE_HTML = """\
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="refresh" content="3">
-<title>realtime-activation-engine Demo</title>
+<title>setu Demo</title>
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -52,7 +52,7 @@ PAGE_HTML = """\
 </style>
 </head>
 <body>
-<h1>&#9889; realtime-activation-engine Demo</h1>
+<h1>&#9889; setu Demo</h1>
 <p class="sub">Received <span class="badge">{count}</span> events</p>
 {events_html}
 </body>

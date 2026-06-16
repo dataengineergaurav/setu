@@ -217,7 +217,7 @@ async fn replication_client_connects_and_streams() {
 #[ignore = "requires running PostgreSQL with logical replication"]
 #[tokio::test]
 async fn pgoutput_decoder_integration() {
-    use realtime_activation_engine::pgoutput::PgoutputDecoder;
+    use setu::pgoutput::PgoutputDecoder;
 
     let slot_name = "test_parser_integration";
 
@@ -280,7 +280,7 @@ async fn pgoutput_decoder_integration() {
                         let events = decoder.decode(&data, wal_end.into());
                         for e in &events {
                             if e.table_name == "test_cdc"
-                                && e.op_type == realtime_activation_engine::types::OpType::Insert
+                                && e.op_type == setu::types::OpType::Insert
                             {
                                 found_insert = true;
                                 if let Some(ref new) = e.new_row {
@@ -333,7 +333,7 @@ rules:
       url: "https://hooks.example.com/upgrade"
 "#;
 
-    let cfg: realtime_activation_engine::config::ActivationConfig = serde_yaml::from_str(yaml).unwrap();
+    let cfg: setu::config::ActivationConfig = serde_yaml::from_str(yaml).unwrap();
 
     assert_eq!(cfg.rules.len(), 1);
     assert_eq!(cfg.rules[0].table, "users");

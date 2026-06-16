@@ -1,9 +1,9 @@
 # ──────────────────────────────────────────────────────────────────────
-# realtime-activation-engine Demo
+# setu Demo
 # ──────────────────────────────────────────────────────────────────────
 # Spins up:
 #   1. PostgreSQL 16 with logical replication enabled
-#   2. realtime-activation-engine (built from local source)
+#   2. setu (built from local source)
 #   3. Webhook Display — a simple HTTP server that logs events + HTML UI
 #
 # Usage:
@@ -58,7 +58,7 @@ services:
     build:
       context: ..
       dockerfile: demo/Dockerfile
-    container_name: realtime-activation-engine
+    container_name: setu
     depends_on:
       postgres:
         condition: service_healthy

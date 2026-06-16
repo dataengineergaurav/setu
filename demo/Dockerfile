@@ -14,8 +14,8 @@ RUN cargo build --release
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates libgcc
 
-COPY --from=builder /app/target/release/realtime-activation-engine /usr/local/bin/
+COPY --from=builder /app/target/release/setu /usr/local/bin/
 COPY demo/activation.yaml /app/activation.yaml
 
 WORKDIR /app
-CMD ["realtime-activation-engine"]
+CMD ["setu"]

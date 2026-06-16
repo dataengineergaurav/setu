@@ -23,7 +23,7 @@ rules:
       type: webhook
       url: "https://crm.example.com/invoice-created"
       headers:
-        X-Source: "realtime-activation-engine"
+        X-Source: "setu"
 
   # ── Slack to accounting channel ──
   - table: "invoices"

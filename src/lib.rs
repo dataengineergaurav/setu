@@ -1,4 +1,4 @@
-//! Real-time data activation engine: listen for database mutations, match
+//! setu: real-time data activation engine — listen for database mutations, match
 //! them against configurable rules, and deliver structured payloads to
 //! webhooks, Slack, Telegram, or other HTTP endpoints.
 //!

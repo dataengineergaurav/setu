@@ -1,4 +1,4 @@
-# Contributing to realtime-activation-engine
+# Contributing to setu
 
 Thank you for your interest in contributing! This document covers the workflow and conventions for submitting changes.
 
