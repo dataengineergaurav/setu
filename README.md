@@ -1,5 +1,10 @@
 # setu
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![Contributing](https://img.shields.io/badge/contributing-guide-green.svg)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/security-policy-orange.svg)](SECURITY.md)
+
 Real-time data activation from database change streams. Watch specific column changes and fire **webhooks**, **Slack**, or **Telegram** notifications the instant they happen — zero polling, no middleware.
 
 ```text
@@ -519,4 +524,4 @@ See the [Structured Logging](#structured-logging-via-tracing--tracing-subscriber
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for the full text.

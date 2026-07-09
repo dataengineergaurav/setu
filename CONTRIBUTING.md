@@ -62,6 +62,10 @@ See `src/ingress/postgres.rs` as a reference implementation.
 3. At least one maintainer review is required before merging.
 4. Squash-merge on approval.
 
+## Reporting Security Issues
+
+If you find a security vulnerability, **do not** open a public issue. See [SECURITY.md](SECURITY.md) for the disclosure process.
+
 ## Code of Conduct
 
 This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating you agree to abide by its terms.
