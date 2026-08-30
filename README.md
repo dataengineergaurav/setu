@@ -35,7 +35,7 @@ Real-time data activation from database change streams. Watch specific column ch
 - **At-least-once delivery** — offset confirmed to the source only after the target returns 2xx
 - **Conditional rules** — match by table, operation type (Insert/Update/Delete), and old/new column values
 - **Dockerized demo** — one command to spin up Postgres + engine + live webhook dashboard
-- **44 unit + integration tests** (48 including Postgres-dependent tests), all passing in **~6.3 s**
+- **43 unit + integration tests** pass in **~6.3 s** with zero external dependencies (mock-based)
 
 ## Quick Start (Docker Demo)
 
@@ -287,6 +287,33 @@ PostgreSQL logical replication transmits changes in a binary protocol (pgoutput)
 
 ---
 
+## How setu Compares (Honestly)
+
+setu is a portfolio project, not a product — see [ADR-0002](docs/adr/0002-portfolio-project-not-a-product.md). If you need backfill, exactly-once delivery, DLQ/retention, or a management UI, use the bigger tool; you'll be happier.
+
+| | setu | Debezium Server | Sequin |
+|---|---|---|---|
+| Runtime | Single 7.2 MB Rust binary, no JVM | Quarkus JVM app | Elixir/Phoenix app + Postgres |
+| Filter on old/new column values | Yes — first-class YAML rule conditions | Limited — source-level column.include/exclude lists | Yes — filter DSL incl. nested JSON |
+| Destinations | Webhook / Slack / Telegram | HTTP, Kinesis, Pub/Sub, Pulsar, Redis, ... | Webhook, SQS, Kafka, HTTP endpoints, search indexes |
+| Backfill | No | No | Yes |
+| Exactly-once | No — at-least-once ([ADR-0001](docs/adr/0001-at-least-once-delivery.md)) | No (at-least-once) | Yes — Sequin Stream |
+| Exactly-once to plain webhooks | No | No | No |
+| Dead-letter queue / retention | No | Via broker (Kafka etc.) | Yes |
+| Management UI | No | Debezium UI (separate) | Yes |
+| Manual resolve on permanent delivery failure | Yes — offset held, you inspect | Configurable per sink | Yes — retry/DLQ flows |
+| Ops footprint | `setu` — one binary, one YAML file | JVM, per-sink config | Two services + migrations |
+
+setu will not chase feature parity with funded products (no backfill, no exactly-once, no UI, no cloud); that is a deliberate decision recorded in [ADR-0002](docs/adr/0002-portfolio-project-not-a-product.md).
+
+**Who should use what:**
+
+- **setu** — you self-host, want zero JVM/queue/UI footprint, and need conditional, column-aware alerting from Postgres to a handful of HTTP endpoints.
+- **[Debezium Server](https://debezium.io/documentation/reference/stable/operations/debezium-server.html)** — you need many sink types, mature ops tooling, and an established community.
+- **[Sequin](https://sequinstream.com/)** — you want backfill, exactly-once, retention/DLQ, or a managed cloud; it's the most complete Postgres-native option.
+
+---
+
 ## Performance Metrics
 
 | Metric | Value | Notes |
@@ -294,7 +321,7 @@ PostgreSQL logical replication transmits changes in a binary protocol (pgoutput)
 | Release binary size | **7.2 MB** | Single static binary, no JVM/Python/node deps |
 | Cold build time | **~40 s** | First build including all dependencies |
 | Incremental build | **< 3 s** | Typical for a single-file change |
-| Unit test suite | **44 tests in ~6.3 s** | Zero external dependencies; mock-based |
+| Unit test suite | **43 tests in ~6.3 s** (re-verified 2026-08-30) | Zero external dependencies; mock-based |
 | Channel capacity | **1024 events** per agent link | Bounded backpressure — slow egress slows ingress |
 | Memory footprint | **Single tokio runtime** | ~10-30 MB resident depending on WAL volume |
 | Event → delivery latency | **Sub-millisecond** (excluding HTTP RTT) | No polling, no persistent connections, hot path is a single `mpsc::send` |
@@ -302,7 +329,7 @@ PostgreSQL logical replication transmits changes in a binary protocol (pgoutput)
 | Retry budget | **3 attempts**, linear backoff 1 s / 2 s / 3 s | Per destination type (webhook, Slack, Telegram) |
 | At-least-once guarantee | **Offset confirmed only after 2xx** | LSN held until delivery succeeds; crash-safe replay |
 
-Benchmarking methodology: all numbers measured on a 2023 M-series MacBook Pro. The binary is a single statically-linked release build with LTO. Throughput is bounded by your WAL generation rate, not by setu — the tokio `mpsc` channel handoff is a single pointer write.
+All numbers measured on an M-series MacBook (re-verified 2026-08-30: 43 tests in 6.32 s, 44.4 s release build, 7,504,128-byte arm64 binary). Throughput is bounded by your WAL generation rate, not by setu — the tokio `mpsc` channel handoff is a single pointer write.
 
 ---
 
