@@ -360,3 +360,17 @@ On start (and on connection loss), `PostgresSource::run()` loops and calls `try_
    - **Branch B:** reads `ReplicationEvent` values from the WAL stream, decodes them via `PgoutputDecoder`, and sends `DbEvent` values through `event_tx`.
 
 On connection failure, waits 5 seconds and retries. On clean disconnect, waits 1 second and retries.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: one `CONTEXT.md` at the root plus `docs/adr/` for decisions. See `docs/agents/domain.md`.
